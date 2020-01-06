@@ -40,7 +40,8 @@ type DSWorker struct {
 
 // JobInfo job info object
 type JobInfo struct {
-	Topic     string `json:"topic"`
+	InTopic   string `json:"in"`
+	OutTopic  string `json:"out"`
 	TargetURL string `json:"target"`
 }
 
@@ -59,9 +60,9 @@ func (worker *DSWorker) Start() error {
 	worker.started = true
 	log.Printf("Sample Worker [%s] Started.\n", worker.ID())
 
-	worker.dataWatcher = worker.helper.WatchData(worker.handleData)
+	worker.dataWatcher = worker.helper.WatchData(worker.jobInfo.InTopic, worker.handleData)
 	log.Println("[INFO-DSWorker] Start watching data. ", worker.ID())
-	worker.helper.GetDataList(worker.handleData)
+	worker.helper.GetDataList(worker.jobInfo.InTopic, worker.handleData)
 
 	return nil
 }
@@ -82,5 +83,5 @@ func (worker *DSWorker) IsStarted() bool {
 //IsStarted ..
 func (worker *DSWorker) handleData(key string, data []byte) {
 	fmt.Println("## Handle Data :", string(data))
-	worker.helper.DeleteData(key)
+	worker.helper.DeleteData(worker.jobInfo.InTopic, key)
 }
