@@ -1,4 +1,4 @@
-package dispatch
+package relay
 
 import (
 	"github.com/gin-gonic/gin"
@@ -7,21 +7,21 @@ import (
 )
 
 const (
-	dispatchPath = protocol.V1Path + "/dispatch"
+	relayPath = protocol.V1Path + "/relay"
 )
 
 // API ...
 type API struct {
-	dispatch *Dispatch
+	relay *Relay
 }
 
 //SupportAPI create new APIService and apply to api.Server
-func SupportAPI(dispatch *Dispatch, apiServer *api.Server) (api *API) {
-	api = &API{dispatch: dispatch}
-	dispatchGroup := apiServer.Group(dispatchPath)
+func SupportAPI(relay *Relay, apiServer *api.Server) (api *API) {
+	api = &API{relay: relay}
+	relayGroup := apiServer.Group(relayPath)
 	{
-		dispatchGroup.POST("/post/:jobid", api.post)
-		dispatchGroup.PUT("/put/:jobid", api.put)
+		relayGroup.POST("/post/:jobid", api.post)
+		relayGroup.PUT("/put/:jobid", api.put)
 	}
 	return api
 }

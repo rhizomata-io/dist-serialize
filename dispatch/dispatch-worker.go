@@ -1,4 +1,4 @@
-package serialize
+package dispatch
 
 import (
 	"fmt"
@@ -19,8 +19,9 @@ type DSWorker struct {
 
 // JobInfo job info object
 type JobInfo struct {
-	InTopic  string `json:"in"`
-	OutTopic string `json:"out"`
+	// InTopic  string `json:"in"`
+	// OutTopic string `json:"out"`
+	InitData string `json:"init"`
 }
 
 // CheckPoint CheckPoint
@@ -36,11 +37,11 @@ func (worker *DSWorker) ID() string {
 //Start ..
 func (worker *DSWorker) Start() error {
 	worker.started = true
-	log.Printf("Sample Worker [%s] Started.\n", worker.ID())
+	log.Printf("DSWorker [%s] Started.\n", worker.ID())
 
-	worker.dataWatcher = worker.helper.WatchData(worker.jobInfo.InTopic, worker.handleData)
+	worker.dataWatcher = worker.helper.WatchData(TopicIn, worker.handleData)
 	log.Println("[INFO-DSWorker] Start watching data. ", worker.ID())
-	worker.helper.GetDataList(worker.jobInfo.InTopic, worker.handleData)
+	worker.helper.GetDataList(TopicIn, worker.handleData)
 
 	return nil
 }
@@ -49,7 +50,7 @@ func (worker *DSWorker) Start() error {
 func (worker *DSWorker) Stop() error {
 	worker.dataWatcher.Stop()
 	worker.started = false
-	log.Printf("Sample Worker [%s] Stopped.\n", worker.ID())
+	log.Printf("DSWorker [%s] Stopped.\n", worker.ID())
 	return nil
 }
 
@@ -60,6 +61,7 @@ func (worker *DSWorker) IsStarted() bool {
 
 //IsStarted ..
 func (worker *DSWorker) handleData(key string, data []byte) {
-	fmt.Println("## Handle Data :", string(data))
-	worker.helper.DeleteData(worker.jobInfo.InTopic, key)
+	fmt.Println("## Handle Data :", key, string(data))
+	worker.helper.DeleteData(TopicIn, key)
+	// worker.helper.pu
 }

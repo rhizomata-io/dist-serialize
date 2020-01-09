@@ -1,4 +1,4 @@
-package serialize
+package dispatch
 
 import (
 	"log"
@@ -8,11 +8,10 @@ import (
 
 // Factory implements worker.Factory
 type Factory struct {
-	FactoryName string
 }
 
-// Name implements worker.Factory.Name as 'ds'
-func (factory *Factory) Name() string { return factory.FactoryName }
+// Name implements worker.Factory.Name as 'dispatch'
+func (factory *Factory) Name() string { return "dispatch" }
 
 // NewWorker implements worker.Factory.NewWorker
 func (factory *Factory) NewWorker(helper *worker.Helper) (worker worker.Worker, err error) {

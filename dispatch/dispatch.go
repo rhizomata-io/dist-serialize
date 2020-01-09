@@ -2,11 +2,19 @@ package dispatch
 
 import (
 	"fmt"
-	"github.com/rhizomata-io/dist-daemonize/kernel"
-	"github.com/rhizomata-io/dist-daemonize/kernel/worker"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/rhizomata-io/dist-daemonize/kernel"
+	"github.com/rhizomata-io/dist-daemonize/kernel/worker"
+)
+
+const (
+	// TopicIn input topic
+	TopicIn = "disp-in"
+	// TopicOut output topic
+	TopicOut = "disp-out"
 )
 
 //Dispatch ...
@@ -60,6 +68,23 @@ func (dispatch *Dispatch) Put(jobid string, data interface{}) (resp []byte, err 
 		return nil, err
 	}
 
-	err = helper.PutObject("in", dispatch.newRowID(), data)
+	rowID := dispatch.newRowID()
+	err = helper.PutObject(TopicIn, rowID, data)
+	if err != nil {
+		return nil, err
+	}
+
+	var wait chan string
+
+	watcher := helper.WatchData(TopicOut,
+		func(key string, value []byte) {
+			fmt.Println("%%% Watch ", key)
+			resp = value
+			wait <- "sss"
+		})
+
+	defer watcher.Stop()
+	<-wait
+
 	return resp, err
 }
