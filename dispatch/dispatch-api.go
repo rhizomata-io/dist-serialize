@@ -1,4 +1,4 @@
-package front
+package dispatch
 
 import (
 	"github.com/gin-gonic/gin"
@@ -10,14 +10,14 @@ const (
 	dispatchPath = protocol.V1Path + "/dispatch"
 )
 
-// DispatchAPI ...
-type DispatchAPI struct {
+// API ...
+type API struct {
 	dispatch *Dispatch
 }
 
 //SupportAPI create new APIService and apply to api.Server
-func SupportAPI(dispatch *Dispatch, apiServer *api.Server) (api *DispatchAPI) {
-	api = &DispatchAPI{dispatch: dispatch}
+func SupportAPI(dispatch *Dispatch, apiServer *api.Server) (api *API) {
+	api = &API{dispatch: dispatch}
 	discoveryGroup := apiServer.Group(dispatchPath)
 	{
 		discoveryGroup.POST("/get/:jobid", api.post)
@@ -26,10 +26,10 @@ func SupportAPI(dispatch *Dispatch, apiServer *api.Server) (api *DispatchAPI) {
 	return api
 }
 
-func (api *DispatchAPI) post(context *gin.Context) {
+func (api *API) post(context *gin.Context) {
 	// jobid := context.Param("jobid")
 }
 
-func (api *DispatchAPI) put(context *gin.Context) {
+func (api *API) put(context *gin.Context) {
 	// jobid := context.Param("jobid")
 }
