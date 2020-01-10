@@ -62,6 +62,7 @@ func (worker *DSWorker) IsStarted() bool {
 //IsStarted ..
 func (worker *DSWorker) handleData(key string, data []byte) {
 	fmt.Println("## Handle Data :", key, string(data))
-	worker.helper.DeleteData(TopicIn, key)
+
+	worker.helper.DeleteDataFullPath(key)
 	// worker.helper.pu
 }
