@@ -3,32 +3,42 @@ package dispatch
 import (
 	"fmt"
 	"log"
-	"math/rand"
-	"time"
+	"sync"
 
 	"github.com/rhizomata-io/dist-daemonize/kernel/kv"
 	"github.com/rhizomata-io/dist-daemonize/kernel/worker"
+	"github.com/rhizomata-io/dist-serialize/utils"
 )
+
+// Handler handler function
+type Handler func(command *Command) string
 
 // DSWorker implements worker.Worker
 type DSWorker struct {
-	id          string
-	helper      *worker.Helper
-	jobInfo     *JobInfo
-	dataWatcher *kv.Watcher
-	started     bool
+	id             string
+	helper         *worker.Helper
+	jobInfo        *JobInfo
+	dataWatcher    *kv.Watcher
+	handler        Handler
+	started        bool
+	queue          *utils.KVQueue
+	commandCounter uint64
+	counterLock    sync.Mutex
 }
 
 // JobInfo job info object
 type JobInfo struct {
-	// InTopic  string `json:"in"`
-	// OutTopic string `json:"out"`
-	InitData string `json:"init"`
+	Handler string                 `json:"handler"`
+	Config  map[string]interface{} `json:"config"`
 }
 
-// CheckPoint CheckPoint
-type CheckPoint struct {
-	Count int64 `json:"count"`
+//Command command object
+type Command struct {
+	CommandCnt uint64
+	FullPath   string
+	RowID      string
+	JobInfo    *JobInfo
+	Data       []byte
 }
 
 //ID ..
@@ -38,12 +48,14 @@ func (worker *DSWorker) ID() string {
 
 //Start ..
 func (worker *DSWorker) Start() error {
+	worker.queue = utils.NewKVQueue()
+
 	worker.started = true
 	log.Printf("DSWorker [%s] Started.\n", worker.ID())
 
 	worker.helper.GetDataList(TopicIn, func(fullPath, rowID string, value []byte) bool {
 		if worker.started {
-			worker.handleData(fullPath, rowID, value)
+			worker.put(fullPath, rowID, value)
 		}
 		return worker.started
 	})
@@ -51,9 +63,14 @@ func (worker *DSWorker) Start() error {
 	worker.dataWatcher = worker.helper.WatchDataWithTopic(TopicIn,
 		func(eventType kv.EventType, fullPath string, rowID string, value []byte) {
 			if eventType == kv.PUT {
-				worker.handleData(fullPath, rowID, value)
+				fmt.Println("Watch PUT ", rowID)
+				worker.put(fullPath, rowID, value)
 			}
 		})
+
+	go func() {
+		worker.handleData()
+	}()
 	log.Println("[INFO-DSWorker] Start watching data. ", worker.ID(), worker.dataWatcher)
 
 	return nil
@@ -79,15 +96,29 @@ func (worker *DSWorker) IsStarted() bool {
 }
 
 //IsStarted ..
-func (worker *DSWorker) handleData(fullPath string, rowID string, data []byte) {
-	fmt.Println("## Handle Data :", fullPath, string(data))
+func (worker *DSWorker) put(fullPath string, rowID string, data []byte) {
+	command := &Command{JobInfo: worker.jobInfo, FullPath: fullPath, RowID: rowID, Data: data}
+	worker.queue.Push(rowID, command)
 
-	worker.helper.DeleteDataFullPath(fullPath)
+	worker.counterLock.Lock()
+	cnt := worker.commandCounter + 1
+	command.CommandCnt = cnt
+	worker.commandCounter = cnt
+	worker.counterLock.Unlock()
 
-	random := uint32(rand.Int31n(1000))
-	outData := "RTN-" + string(data) + "-" + worker.id + "-" + worker.helper.KernelID() + ":" + fmt.Sprint(random)
+	fmt.Println("PUSH ", rowID)
+}
 
-	time.Sleep(time.Duration(random) * time.Millisecond)
+//IsStarted ..
+func (worker *DSWorker) handleData() {
+	for worker.started {
+		_, oCmd := worker.queue.Pop()
+		command := oCmd.(*Command)
 
-	worker.helper.PutData(TopicOut, rowID, outData)
+		worker.helper.DeleteDataFullPath(command.FullPath)
+
+		outData := worker.handler(command)
+
+		worker.helper.PutData(TopicOut, command.RowID, outData)
+	}
 }

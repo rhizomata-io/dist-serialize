@@ -31,7 +31,7 @@ func (queue *KVQueue) Push(key interface{}, value interface{}) {
 	// }
 	queue.kvMap[key] = value
 
-	if queue.waiting > 1 {
+	if queue.waiting > 0 {
 		queue.lock <- false
 	}
 	queue.Unlock()

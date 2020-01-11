@@ -10,7 +10,6 @@ import (
 
 	"github.com/rhizomata-io/dist-daemonize/dd"
 	"github.com/rhizomata-io/dist-daemonize/kernel/config"
-	"github.com/rhizomata-io/dist-daemonize/kernel/job"
 	"github.com/rhizomata-io/dist-serialize/dispatch"
 )
 
@@ -18,22 +17,9 @@ func main() {
 	runOptions := config.ParseRunOptions()
 
 	daemonizer, err := dd.Daemonize(runOptions)
-	if err == nil {
-		factory := &dispatch.Factory{}
-		daemonizer.RegisterWorkerFactory(factory)
-		// daemonizer.Start()
-	} else {
+	if err != nil {
 		log.Fatal("ERROR", err)
 	}
-
-	job1 := job.NewWithPIAndID("job1", "dispatch", `{"init":"helloA"}`)
-	daemonizer.AddJobIfNotExists(job1)
-
-	job2 := job.NewWithPIAndID("job2", "dispatch", `{"init":"helloB"}`)
-	daemonizer.AddJobIfNotExists(job2)
-
-	job3 := job.NewWithPIAndID("job3", "dispatch", `{"init":"helloC"}`)
-	daemonizer.AddJobIfNotExists(job3)
 
 	disp := dispatch.New(daemonizer.GetKernel())
 
@@ -66,10 +52,12 @@ func (counter *Counter) add() int64 {
 }
 
 func putData(disp *dispatch.Dispatch, kernelid string, jobid string, numStr string, counter *Counter) {
+	count := counter.add()
 	start := time.Now()
+	fmt.Printf("@ Put: %s [%d]\n", jobid, count)
 	resp, _ := disp.Put(jobid, fmt.Sprintf("%s-%s-%s", strings.ToUpper(jobid), kernelid, numStr))
 	end := time.Now()
 	ellapsed := end.Sub(start)
 
-	fmt.Printf("@ Resp: %s resp=%s [%d] %s\n", jobid, string(resp), counter.add(), ellapsed)
+	fmt.Printf("@ Resp: %s resp=%s [%d] %s\n", jobid, string(resp), count, ellapsed)
 }
