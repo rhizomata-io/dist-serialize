@@ -9,13 +9,7 @@ import (
 	"github.com/rhizomata-io/dist-daemonize/kernel"
 	"github.com/rhizomata-io/dist-daemonize/kernel/kv"
 	"github.com/rhizomata-io/dist-daemonize/kernel/worker"
-)
-
-const (
-	// TopicIn input topic
-	TopicIn = "disp-in"
-	// TopicOut output topic
-	TopicOut = "disp-out"
+	"github.com/rhizomata-io/dist-serialize/serialize"
 )
 
 //Dispatch ...
@@ -75,7 +69,7 @@ func (dispatch *Dispatch) Put(jobid string, data interface{}) (resp []byte, err 
 
 	var finish chan bool = make(chan bool)
 
-	watcher := helper.WatchData(TopicOut, rowID,
+	watcher := helper.WatchData(serialize.TopicOut, rowID,
 		func(eventType kv.EventType, fullPath string, rowID string, value []byte) {
 			resp = value
 			finish <- true
@@ -83,7 +77,7 @@ func (dispatch *Dispatch) Put(jobid string, data interface{}) (resp []byte, err 
 
 	defer watcher.Stop()
 
-	err = helper.PutObject(TopicIn, rowID, data)
+	err = helper.PutObject(serialize.TopicIn, rowID, data)
 	if err != nil {
 		return nil, err
 	}

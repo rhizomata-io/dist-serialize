@@ -1,4 +1,4 @@
-package dispatch
+package serialize 
 
 import (
 	"github.com/rhizomata-io/dist-daemonize/kernel/worker"

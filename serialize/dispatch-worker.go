@@ -1,4 +1,4 @@
-package dispatch
+package serialize
 
 import (
 	"fmt"
@@ -8,6 +8,13 @@ import (
 	"github.com/rhizomata-io/dist-daemonize/kernel/kv"
 	"github.com/rhizomata-io/dist-daemonize/kernel/worker"
 	"github.com/rhizomata-io/dist-serialize/utils"
+)
+
+const (
+	// TopicIn input topic
+	TopicIn = "disp-in"
+	// TopicOut output topic
+	TopicOut = "disp-out"
 )
 
 // Handler handler function

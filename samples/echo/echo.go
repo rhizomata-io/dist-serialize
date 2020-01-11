@@ -9,7 +9,7 @@ import (
 	"github.com/rhizomata-io/dist-daemonize/dd"
 	"github.com/rhizomata-io/dist-daemonize/kernel/config"
 	"github.com/rhizomata-io/dist-daemonize/kernel/job"
-	"github.com/rhizomata-io/dist-serialize/dispatch"
+	"github.com/rhizomata-io/dist-serialize/serialize"
 )
 
 func main() {
@@ -17,9 +17,9 @@ func main() {
 
 	daemonizer, err := dd.Daemonize(runOptions)
 	if err == nil {
-		factory := dispatch.NewFactory("dispatch")
+		factory := serialize.NewFactory("dispatch")
 
-		handler := func(command *dispatch.Command) string {
+		handler := func(command *serialize.Command) string {
 			fmt.Println("## Handle Data :", command.FullPath, string(command.Data), command.CommandCnt)
 			random := uint32(rand.Int31n(100))
 			outData := fmt.Sprintf("RTN-%s-%s-%s:%d [%d]", command.Data, command.JobInfo.Config["target"], runOptions.Name, random, command.CommandCnt)
