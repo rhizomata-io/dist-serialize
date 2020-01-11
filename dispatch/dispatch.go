@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rhizomata-io/dist-daemonize/kernel"
+	"github.com/rhizomata-io/dist-daemonize/kernel/kv"
 	"github.com/rhizomata-io/dist-daemonize/kernel/worker"
 )
 
@@ -19,6 +20,7 @@ const (
 
 //Dispatch ...
 type Dispatch struct {
+	sync.Mutex
 	kernel      *kernel.Kernel
 	helperMap   map[string]*worker.Helper
 	counterLock sync.Mutex
@@ -44,6 +46,7 @@ func (dispatch *Dispatch) newRowID() (rowID string) {
 }
 
 func (dispatch *Dispatch) getHelper(jobid string) (helper *worker.Helper, err error) {
+	dispatch.Lock()
 	helper = dispatch.helperMap[jobid]
 
 	if helper == nil {
@@ -56,7 +59,7 @@ func (dispatch *Dispatch) getHelper(jobid string) (helper *worker.Helper, err er
 		helper = dispatch.kernel.GetWorkerManager().NewHelper(&job)
 		dispatch.helperMap[jobid] = helper
 	}
-
+	dispatch.Unlock()
 	return helper, err
 }
 
@@ -69,22 +72,21 @@ func (dispatch *Dispatch) Put(jobid string, data interface{}) (resp []byte, err 
 	}
 
 	rowID := dispatch.newRowID()
+
+	var finish chan bool = make(chan bool)
+
+	watcher := helper.WatchData(TopicOut, rowID,
+		func(eventType kv.EventType, fullPath string, rowID string, value []byte) {
+			resp = value
+			finish <- true
+		})
+
+	defer watcher.Stop()
+
 	err = helper.PutObject(TopicIn, rowID, data)
 	if err != nil {
 		return nil, err
 	}
-
-	var wait chan string
-
-	watcher := helper.WatchData(TopicOut,
-		func(key string, value []byte) {
-			fmt.Println("%%% Watch ", key)
-			resp = value
-			wait <- "sss"
-		})
-
-	defer watcher.Stop()
-	<-wait
-
+	<-finish
 	return resp, err
 }

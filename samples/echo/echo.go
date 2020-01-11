@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"strconv"
 
 	"github.com/rhizomata-io/dist-daemonize/dd"
 	"github.com/rhizomata-io/dist-daemonize/kernel/config"
@@ -24,17 +23,17 @@ func main() {
 		log.Fatal("ERROR", err)
 	}
 
-	job1 := job.NewWithPIAndID("job1", "dispatch", `{"init":"hello"}`)
+	job1 := job.NewWithPIAndID("job1", "dispatch", `{"init":"helloA"}`)
 	daemonizer.AddJobIfNotExists(job1)
 
-	disp := dispatch.New(daemonizer.GetKernel())
+	job2 := job.NewWithPIAndID("job2", "dispatch", `{"init":"helloB"}`)
+	daemonizer.AddJobIfNotExists(job2)
 
-	for i := 0; i < 2; i++ {
-		go disp.Put("job1", "J-"+strconv.Itoa(i))
-		// go disp.Put("job1", "Hellooooooooooooo-"+strconv.Itoa(i))
-		// go disp.Put("job1", "Helluuuuuuuuuuuuu-"+strconv.Itoa(i))
-		// go disp.Put("job1", "Hiiiiiiiiiiiiiiii-"+strconv.Itoa(i))
-	}
+	job3 := job.NewWithPIAndID("job3", "dispatch", `{"init":"helloC"}`)
+	daemonizer.AddJobIfNotExists(job3)
+
+	// disp := dispatch.New(daemonizer.GetKernel())
+
 	daemonizer.Wait()
 	// sigs := make(chan os.Signal, 1)
 	// signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
