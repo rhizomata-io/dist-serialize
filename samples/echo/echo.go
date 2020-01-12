@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 
 	"github.com/rhizomata-io/dist-daemonize/dd"
 	"github.com/rhizomata-io/dist-daemonize/kernel/config"

@@ -40,7 +40,7 @@ func main() {
 	reqCounter := new(Counter)
 	respCounter := new(Counter)
 	connCounter := new(Counter)
-	jobRing := ring.New(8)
+	jobRing := ring.New(10)
 
 	for i := 1; i < 8; i++ {
 		jobRing = jobRing.Next()
@@ -51,8 +51,10 @@ func main() {
 
 	jobRing = jobRing.Next()
 	jobRing.Value = "job2"
-	// jobRing = jobRing.Next()
-	// jobRing.Value = "job2"
+	jobRing = jobRing.Next()
+	jobRing.Value = "job2"
+	jobRing = jobRing.Next()
+	jobRing.Value = "job3"
 
 	portRing := ring.New(3)
 
@@ -63,7 +65,7 @@ func main() {
 
 	start := time.Now()
 
-	for reqCount := 0; reqCount < 100; reqCount++ {
+	for reqCount := 0; reqCount < 500; reqCount++ {
 		numStr := strconv.Itoa(reqCount)
 
 		for i := 0; i < 7; i++ {

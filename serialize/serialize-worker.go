@@ -61,7 +61,7 @@ func (worker *DSWorker) Start() error {
 
 	worker.helper.GetDataList(TopicIn, func(fullPath, rowID string, value []byte) bool {
 		if worker.started {
-			worker.put(fullPath, rowID, value)
+			worker.handleData(fullPath, rowID, value)
 		}
 		return worker.started
 	})
@@ -70,13 +70,29 @@ func (worker *DSWorker) Start() error {
 		func(eventType kv.EventType, fullPath string, rowID string, value []byte) {
 			if eventType == kv.PUT {
 				// fmt.Println("Watch PUT ", rowID)
-				worker.put(fullPath, rowID, value)
+				worker.handleData(fullPath, rowID, value)
 			}
 		})
 
-	go func() {
-		worker.handleData()
-	}()
+	// worker.helper.GetDataList(TopicIn, func(fullPath, rowID string, value []byte) bool {
+	// 	if worker.started {
+	// 		worker.put(fullPath, rowID, value)
+	// 	}
+	// 	return worker.started
+	// })
+
+	// worker.dataWatcher = worker.helper.WatchDataWithTopic(TopicIn,
+	// 	func(eventType kv.EventType, fullPath string, rowID string, value []byte) {
+	// 		if eventType == kv.PUT {
+	// 			// fmt.Println("Watch PUT ", rowID)
+	// 			worker.put(fullPath, rowID, value)
+	// 		}
+	// 	})
+
+	// go func() {
+	// 	worker.handleData()
+	// }()
+
 	log.Println("[INFO-DSWorker] Start watching data. ", worker.ID(), worker.dataWatcher)
 
 	return nil
@@ -101,10 +117,8 @@ func (worker *DSWorker) IsStarted() bool {
 	return worker.started
 }
 
-//IsStarted ..
-func (worker *DSWorker) put(fullPath string, rowID string, data []byte) {
+func (worker *DSWorker) handleData(fullPath string, rowID string, data []byte) {
 	command := &Command{JobInfo: worker.jobInfo, FullPath: fullPath, RowID: rowID, Data: data}
-	worker.queue.Push(rowID, command)
 
 	worker.counterLock.Lock()
 	cnt := worker.commandCounter + 1
@@ -112,21 +126,40 @@ func (worker *DSWorker) put(fullPath string, rowID string, data []byte) {
 	worker.commandCounter = cnt
 	worker.counterLock.Unlock()
 
-	log.Printf("[DEBUG] Push Command to Queue[%d] for worker %s\n", worker.queue.Size(), worker.ID())
+	worker.helper.DeleteDataFullPath(fullPath)
+
+	log.Printf("[INFO] Handle Command[%s] on worker %s\n", rowID, worker.ID())
+	outData := worker.handler(command)
+
+	worker.helper.PutData(TopicOut, command.RowID, outData)
 }
 
-//IsStarted ..
-func (worker *DSWorker) handleData() {
-	for worker.started {
-		_, oCmd := worker.queue.Pop()
+//
+// func (worker *DSWorker) put(fullPath string, rowID string, data []byte) {
+// 	command := &Command{JobInfo: worker.jobInfo, FullPath: fullPath, RowID: rowID, Data: data}
+// 	worker.queue.Push(rowID, command)
 
-		command := oCmd.(*Command)
+// 	worker.counterLock.Lock()
+// 	cnt := worker.commandCounter + 1
+// 	command.CommandCnt = cnt
+// 	worker.commandCounter = cnt
+// 	worker.counterLock.Unlock()
 
-		worker.helper.DeleteDataFullPath(command.FullPath)
+// 	log.Printf("[DEBUG] Push Command to Queue[%d] for worker %s\n", worker.queue.Size(), worker.ID())
+// }
 
-		log.Printf("[INFO] Handle Command[%s] on worker %s\n", command.RowID, worker.ID())
-		outData := worker.handler(command)
+// //IsStarted ..
+// func (worker *DSWorker) handleData() {
+// 	for worker.started {
+// 		_, oCmd := worker.queue.Pop()
 
-		worker.helper.PutData(TopicOut, command.RowID, outData)
-	}
-}
+// 		command := oCmd.(*Command)
+
+// 		worker.helper.DeleteDataFullPath(command.FullPath)
+
+// 		log.Printf("[INFO] Handle Command[%s] on worker %s\n", command.RowID, worker.ID())
+// 		outData := worker.handler(command)
+
+// 		worker.helper.PutData(TopicOut, command.RowID, outData)
+// 	}
+// }
