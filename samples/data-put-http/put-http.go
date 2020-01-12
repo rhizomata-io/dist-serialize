@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,7 +72,7 @@ func main() {
 		for i := 0; i < 7; i++ {
 			jobRing = jobRing.Next()
 			portRing = portRing.Next()
-			go putData(jobRing.Value.(string), portRing.Value.(string), numStr, connCounter, reqCounter, respCounter)
+			go putData(jobRing.Value.(string), portRing, numStr, connCounter, reqCounter, respCounter)
 		}
 
 		time.Sleep(100 * time.Millisecond)
@@ -83,11 +84,11 @@ func main() {
 
 	end := time.Now()
 	ellapsed := end.Sub(start)
-	avg := int64(ellapsed) / reqCounter.count
-	fmt.Printf("@ All Request: %d [%s] avg.=%s\n", reqCounter.count, ellapsed, time.Duration(avg))
+	tps := float64(reqCounter.count) / ellapsed.Seconds()
+	fmt.Printf("@ All Request: %d [%s] TPS=%d\n", reqCounter.count, ellapsed, int64(tps))
 }
 
-func putData(jobid string, port string, numStr string, connCounter, reqCounter, respCounter *Counter) {
+func putData(jobid string, portRing *ring.Ring, numStr string, connCounter, reqCounter, respCounter *Counter) {
 	reqCount := reqCounter.add()
 
 	body := fmt.Sprintf("%s-%s [%d]", strings.ToUpper(jobid), numStr, reqCount)
@@ -100,22 +101,34 @@ func putData(jobid string, port string, numStr string, connCounter, reqCounter, 
 	}
 
 	start := time.Now()
-	fmt.Printf("@ Put: %s to %s (%s) [%d]\n", jobid, port, numStr, reqCount)
-
-	url := fmt.Sprintf("http://127.0.0.1:%s/api/v1/dispatch/post/%s", port, jobid)
-
 	connCounter.add()
 	defer connCounter.sub()
 
-	resp, err := http.Post(url, "text/plain", reqBody)
+	var respCount int64
+	var resp *http.Response
 
-	respCount := respCounter.add()
+	port := portRing.Next().Value.(string)
+	fmt.Printf("@ Put: %s to %s (%s) [%d]\n", jobid, port, numStr, reqCount)
+	resp, err := send(port, jobid, reqBody)
 
 	if err != nil {
-		log.Println("[ERROR] Put http >", err)
-		return
+		log.Println("[ERROR] Put port >", port, reqCount, err)
+		switch err.(type) {
+		default:
+			respCount = respCounter.add()
+			return
+		case *url.Error:
+			port = portRing.Next().Value.(string)
+			resp, err = send(port, jobid, reqBody)
+			if err != nil {
+				log.Println("[ERROR] Put again port >", port, reqCount, err)
+				respCount = respCounter.add()
+				return
+			}
+		}
 	}
 
+	respCount = respCounter.add()
 	defer resp.Body.Close()
 
 	end := time.Now()
@@ -128,4 +141,11 @@ func putData(jobid string, port string, numStr string, connCounter, reqCounter, 
 	}
 
 	fmt.Printf("@ Resp: %s resp=%s [%d]:[%d] %s\n", jobid, string(respBody), reqCount, respCount, ellapsed)
+}
+
+func send(port string, jobid string, reqBody *bytes.Buffer) (resp *http.Response, err error) {
+	url := fmt.Sprintf("http://127.0.0.1:%s/api/v1/dispatch/post/%s", port, jobid)
+
+	resp, err = http.Post(url, "text/plain", reqBody)
+	return resp, err
 }

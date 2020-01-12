@@ -19,12 +19,17 @@ func NewQueue() *Queue {
 	return &queue
 }
 
+// Size ..
+func (queue *Queue) Size() int {
+	return queue.innerList.Len()
+}
+
 // Push ..
 func (queue *Queue) Push(value interface{}) {
 	queue.Lock()
 	queue.innerList.PushBack(value)
 	queue.innerList.Init()
-	if queue.waiting > 1 {
+	if queue.waiting > 0 {
 		queue.lock <- false
 	}
 	queue.Unlock()

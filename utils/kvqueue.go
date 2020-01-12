@@ -31,9 +31,8 @@ func (queue *KVQueue) Push(key interface{}, value interface{}) {
 	oldval := queue.kvMap[key]
 	if oldval == nil {
 		queue.innerList.PushBack(key)
-	} // else {
-	// 	fmt.Println("----------------- over write : ", key, oldval, value)
-	// }
+	}
+
 	queue.kvMap[key] = value
 
 	if queue.waiting > 0 {
@@ -53,6 +52,7 @@ func (queue *KVQueue) Pop() (key interface{}, value interface{}) {
 	}
 
 	value = queue.kvMap[key]
+	delete(queue.kvMap, key)
 	return key, value
 }
 
