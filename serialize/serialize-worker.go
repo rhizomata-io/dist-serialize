@@ -3,6 +3,7 @@ package serialize
 import (
 	"log"
 	"sync"
+	"time"
 
 	"github.com/rhizomata-io/dist-daemonize/kernel/kv"
 	"github.com/rhizomata-io/dist-daemonize/kernel/worker"
@@ -64,6 +65,8 @@ func (worker *DSWorker) Start() error {
 			if eventType == kv.PUT {
 				worker.put(fullPath, rowID, value)
 				// worker.processData(fullPath, rowID, value)
+				// etcd watch stream problem
+				time.Sleep(2 * time.Millisecond)
 			}
 		})
 
