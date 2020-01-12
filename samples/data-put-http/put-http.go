@@ -41,21 +41,19 @@ func main() {
 	reqCounter := new(Counter)
 	respCounter := new(Counter)
 	connCounter := new(Counter)
-	jobRing := ring.New(7)
+	jobRing := ring.New(10)
 
 	for i := 1; i < 8; i++ {
 		jobRing = jobRing.Next()
 		jobRing.Value = fmt.Sprintf("job%d", i)
-		// jobRing = jobRing.Next()
-		// jobRing.Value = fmt.Sprintf("job%d", i)
 	}
 
-	// jobRing = jobRing.Next()
-	// jobRing.Value = "job2"
-	// jobRing = jobRing.Next()
-	// jobRing.Value = "job2"
-	// jobRing = jobRing.Next()
-	// jobRing.Value = "job3"
+	jobRing = jobRing.Next()
+	jobRing.Value = "job2"
+	jobRing = jobRing.Next()
+	jobRing.Value = "job2"
+	jobRing = jobRing.Next()
+	jobRing.Value = "job3"
 
 	portRing := ring.New(3)
 
