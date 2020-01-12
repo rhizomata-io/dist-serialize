@@ -58,7 +58,7 @@ func (dispatch *Dispatch) getHelper(jobid string) (helper *worker.Helper, err er
 }
 
 // Put ...
-func (dispatch *Dispatch) Put(jobid string, data interface{}) (resp []byte, err error) {
+func (dispatch *Dispatch) Put(jobid string, data string) (resp []byte, err error) {
 	helper, err := dispatch.getHelper(jobid)
 
 	if err != nil {
@@ -70,14 +70,17 @@ func (dispatch *Dispatch) Put(jobid string, data interface{}) (resp []byte, err 
 	var finish chan bool = make(chan bool)
 
 	watcher := helper.WatchData(serialize.TopicOut, rowID,
-		func(eventType kv.EventType, fullPath string, rowID string, value []byte) {
-			resp = value
-			finish <- true
+		func(eventType kv.EventType, fullPath string, row string, value []byte) {
+			if eventType == kv.PUT {
+				resp = value
+				helper.DeleteData(serialize.TopicOut, rowID)
+				finish <- true
+			}
 		})
 
 	defer watcher.Stop()
 
-	err = helper.PutObject(serialize.TopicIn, rowID, data)
+	err = helper.PutData(serialize.TopicIn, rowID, data)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,6 @@
 package serialize
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
@@ -70,7 +69,7 @@ func (worker *DSWorker) Start() error {
 	worker.dataWatcher = worker.helper.WatchDataWithTopic(TopicIn,
 		func(eventType kv.EventType, fullPath string, rowID string, value []byte) {
 			if eventType == kv.PUT {
-				fmt.Println("Watch PUT ", rowID)
+				// fmt.Println("Watch PUT ", rowID)
 				worker.put(fullPath, rowID, value)
 			}
 		})
@@ -113,17 +112,19 @@ func (worker *DSWorker) put(fullPath string, rowID string, data []byte) {
 	worker.commandCounter = cnt
 	worker.counterLock.Unlock()
 
-	fmt.Println("PUSH ", rowID)
+	log.Printf("[DEBUG] Push Command to Queue[%d] for worker %s\n", worker.queue.Size(), worker.ID())
 }
 
 //IsStarted ..
 func (worker *DSWorker) handleData() {
 	for worker.started {
 		_, oCmd := worker.queue.Pop()
+
 		command := oCmd.(*Command)
 
 		worker.helper.DeleteDataFullPath(command.FullPath)
 
+		log.Printf("[INFO] Handle Command[%s] on worker %s\n", command.RowID, worker.ID())
 		outData := worker.handler(command)
 
 		worker.helper.PutData(TopicOut, command.RowID, outData)

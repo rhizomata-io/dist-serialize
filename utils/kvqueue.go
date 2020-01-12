@@ -20,6 +20,11 @@ func NewKVQueue() *KVQueue {
 	return &queue
 }
 
+// Size ..
+func (queue *KVQueue) Size() int {
+	return queue.innerList.Len()
+}
+
 // Push ..
 func (queue *KVQueue) Push(key interface{}, value interface{}) {
 	queue.Lock()
