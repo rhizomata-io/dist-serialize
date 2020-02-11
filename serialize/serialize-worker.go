@@ -146,6 +146,7 @@ func (worker *DSWorker) handleData() {
 
 		log.Printf("[INFO] Handle Command[%s] on worker %s\n", command.RowID, worker.ID())
 		outData := worker.handler(command)
+		log.Printf("[INFO] END Handle Command[%s] on worker %s\n", command.RowID, worker.ID())
 
 		worker.helper.PutData(TopicOut, command.RowID, outData)
 	}
